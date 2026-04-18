@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Peer Rating System</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
   :root {
     --bg: #f4f1ec;
@@ -590,6 +591,63 @@
     margin-bottom: 8px;
   }
 
+  /* ── PIN DISPLAY ── */
+  .pin-display {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--gold-light);
+    border: 1px solid rgba(200,134,26,0.25);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: 1px;
+  }
+  .roster-chip .pin-display { margin-left: 4px; }
+
+  /* ── PIN INPUT ── */
+  .pin-input-wrap {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin: 16px 0;
+  }
+  .pin-digit {
+    width: 54px; height: 60px;
+    text-align: center;
+    font-size: 1.6rem;
+    font-family: 'Courier New', monospace;
+    font-weight: 700;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text);
+    transition: border-color var(--transition), box-shadow var(--transition);
+    caret-color: var(--accent);
+  }
+  .pin-digit:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(26,107,90,0.12);
+  }
+
+  /* ── LOCK BADGE ── */
+  .lock-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .lock-badge.locked { background: var(--accent-light); color: var(--accent); }
+  .lock-badge.unlocked { background: var(--surface-2); color: var(--text-3); border: 1px solid var(--border); }
+  .lock-badge.partial { background: var(--warn-light); color: var(--warn); }
+
   /* ── SETUP WARNING ── */
   .setup-warning {
     background: var(--warn-light);
@@ -792,18 +850,20 @@
     </div>
   </div>
 
-  <!-- STUDENT SELECT NAME -->
-  <div id="view-student-select" class="view hidden">
+  <!-- STUDENT PIN VERIFY -->
+  <div id="view-student-pin" class="view hidden">
     <div class="card card-sm" style="margin-top:32px;">
-      <h2 id="studentSelectTitle">Who are you?</h2>
-      <p class="muted" id="studentSelectSubtitle" style="margin-bottom:16px;"></p>
-      <div id="studentSelectStatus"></div>
-      <label class="label">Select Your Name</label>
-      <select id="studentSelectName">
-        <option value="">— Choose your name —</option>
-      </select>
-      <div class="btn-row">
-        <button class="btn-primary" onclick="studentEnterRating()">Continue to Rating →</button>
+      <h2 id="studentPinTitle">Enter Your PIN</h2>
+      <p class="muted" id="studentPinSubtitle" style="margin-bottom:4px;">Your teacher gave you a personal 4-digit PIN.</p>
+      <div id="studentPinStatus"></div>
+      <div class="pin-input-wrap">
+        <input class="pin-digit" id="pin0" maxlength="1" inputmode="numeric" pattern="[0-9]" />
+        <input class="pin-digit" id="pin1" maxlength="1" inputmode="numeric" pattern="[0-9]" />
+        <input class="pin-digit" id="pin2" maxlength="1" inputmode="numeric" pattern="[0-9]" />
+        <input class="pin-digit" id="pin3" maxlength="1" inputmode="numeric" pattern="[0-9]" />
+      </div>
+      <div class="btn-row" style="justify-content:center;">
+        <button class="btn-primary" onclick="studentVerifyPin()">Verify PIN →</button>
         <button class="btn-ghost" onclick="go('student-entry')">← Back</button>
       </div>
     </div>
@@ -835,7 +895,8 @@
       <div class="done-screen">
         <div class="done-icon">✅</div>
         <h2>Ratings Submitted!</h2>
-        <p style="color:var(--text-2); margin-bottom:24px;">Your responses have been recorded. Thanks for participating honestly.</p>
+        <p style="color:var(--text-2); margin-bottom:10px;">Your responses have been recorded and locked.</p>
+        <p class="muted" style="font-size:0.83rem; margin-bottom:24px;">Need to change something? Ask your teacher to unlock your submission.</p>
         <button class="btn-secondary" onclick="go('home')">Return Home</button>
       </div>
     </div>
@@ -844,8 +905,21 @@
 
 <!-- ============ FIREBASE CONFIG & APP LOGIC ============ -->
 <script type="module">
+  // ── ES module imports FIRST (required by spec) ──
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+  import {
+    getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
+    onAuthStateChanged, signOut
+  } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+  import {
+    getFirestore, collection, doc, addDoc, setDoc, getDoc, getDocs,
+    query, where, deleteDoc, serverTimestamp, writeBatch
+  } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
   // =====================================================
   // 1. REPLACE WITH YOUR FIREBASE PROJECT CONFIG
+  //    Get this from: Firebase Console → Project Settings
+  //    → Your Apps → Firebase SDK snippet → Config
   // =====================================================
   const firebaseConfig = {
     apiKey: "AIzaSyDsci9w7Z-tBJbk0FtabtXKF4wRYud5S9Q",
@@ -857,19 +931,35 @@
   };
   // =====================================================
 
-  if (firebaseConfig.apiKey === "YOUR_API_KEY") {
+  // =====================================================
+  // 2. EMAILJS CONFIG (optional — for sending PINs by email)
+  //    Sign up free at https://www.emailjs.com
+  //    Free tier = 200 emails/month (enough for any class)
+  //
+  //    Steps:
+  //    a) Email Services → Add Service → connect Gmail/Outlook
+  //       → copy Service ID
+  //    b) Email Templates → Create Template
+  //       Set these fields in the template:
+  //         To Email  : {{to_email}}
+  //         From Name : Your Name or School Name  ← static text, NOT a variable
+  //       Add these variables in the body:
+  //         {{to_name}}, {{assessment_title}}, {{class_code}}, {{pin}}, {{url}}
+  //       → copy Template ID
+  //    c) Account → General → copy Public Key
+  // =====================================================
+  const emailjsConfig = {
+    publicKey:   'gUEXLDPTURvfwaFuR',   // e.g. 'user_Abc123XYZ'
+    serviceId:   'service_a9geqsg',   // e.g. 'service_outlook'
+    templateId:  'template_987xrtb',  // e.g. 'template_pin_email'
+  };
+  const emailjsReady = emailjsConfig.publicKey !== 'YOUR_EMAILJS_PUBLIC_KEY';
+  if (emailjsReady) emailjs.init({ publicKey: emailjsConfig.publicKey });
+  // =====================================================
+
+  if (firebaseConfig.apiKey === 'YOUR_API_KEY') {
     document.getElementById('setupWarning').classList.remove('hidden');
   }
-
-  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-  import {
-    getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
-    onAuthStateChanged, signOut
-  } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-  import {
-    getFirestore, collection, doc, addDoc, setDoc, getDoc, getDocs,
-    query, where, deleteDoc, serverTimestamp, writeBatch
-  } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
@@ -888,6 +978,7 @@
     return Array.from({length: 6}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
   };
   const genId = () => Math.random().toString(36).substring(2, 10);
+  const genPin = () => String(Math.floor(1000 + Math.random() * 9000)); // 4-digit PIN, never starts with 0
   const esc = s => (s || '').toString().replace(/[&<>"']/g, c =>
     ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -901,7 +992,7 @@
 
   // ── View routing ──
   const views = ['home','teacher-login','dashboard','create-assessment','edit-assessment',
-                 'student-entry','student-select','student-rating','student-done'];
+                 'student-entry','student-pin','student-rating','student-done'];
 
   function go(view) {
     views.forEach(v => {
@@ -1015,8 +1106,18 @@
       const groupsSnap = await getDocs(collection(db, 'assessments', id, 'groups'));
       const groups = [];
       groupsSnap.forEach(g => groups.push({ id: g.id, ...g.data() }));
-      // roster is stored directly on the assessment doc
-      state.currentAssessment = { id, ...aDoc.data(), groups };
+      const data = aDoc.data();
+      // ── PIN migration: if any roster entry is missing a PIN, generate and save ──
+      let roster = data.roster || [];
+      const needsMigration = roster.some(s => !s.pin);
+      if (needsMigration) {
+        const usedPins = new Set(roster.filter(s => s.pin).map(s => s.pin));
+        const uniquePin = () => { let p; do { p = genPin(); } while (usedPins.has(p)); usedPins.add(p); return p; };
+        roster = roster.map(s => s.pin ? s : { ...s, pin: uniquePin() });
+        // Save migrated roster back silently
+        await setDoc(doc(db, 'assessments', id), { roster }, { merge: true });
+      }
+      state.currentAssessment = { id, ...data, roster, groups };
       go('edit-assessment');
     } catch (e) { alert('Error: ' + e.message); }
   };
@@ -1066,39 +1167,211 @@
         <div class="drop-zone" onclick="document.getElementById('rosterCsvInput').click()">
           <div class="drop-icon">📂</div>
           <p><strong>Upload your student roster CSV</strong><br>
-          One student per row: <code>Name, ID (optional)</code><br>
-          <span style="color:var(--text-3);">Header row is detected automatically.</span></p>
+          Supported columns: <code>Name</code> &nbsp;|&nbsp; <code>Name, Email</code> &nbsp;|&nbsp; <code>Name, ID, Email</code><br>
+          <span style="color:var(--text-3);">A unique 4-digit PIN is auto-generated per student.</span></p>
           <button class="btn-primary" type="button" onclick="event.stopPropagation(); document.getElementById('rosterCsvInput').click()">Choose CSV File</button>
         </div>
       `;
-    } else {
-      panel.classList.add('has-roster');
-      const assigned = allAssignedIds();
-      const unassignedCount = roster.filter(s => !assigned.has(s.id)).length;
-      panel.innerHTML = `
-        <div class="roster-header">
-          <div class="roster-title">
-            <h4 style="margin:0;">Student Roster</h4>
-            <span class="roster-badge">${roster.length} students</span>
-            ${unassignedCount > 0 ? `<span class="roster-badge" style="background:var(--warn-light);color:var(--warn);border-color:rgba(176,92,26,0.2);">${unassignedCount} unassigned</span>` : '<span class="roster-badge">All assigned ✓</span>'}
+      return;
+    }
+
+    panel.classList.add('has-roster');
+    const assigned = allAssignedIds();
+    const unassignedCount = roster.filter(s => !assigned.has(s.id)).length;
+    const hasEmails = roster.some(s => s.email);
+    const withEmail = roster.filter(s => s.email);
+    const noEmail = roster.filter(s => !s.email);
+
+    // ── Build mailto fallback (single student) ──
+    const buildMailto = (s) => {
+      const url = window.location.origin + window.location.pathname + '?code=' + a.accessCode;
+      const subject = encodeURIComponent(`Peer Assessment — Your Personal PIN`);
+      const body = encodeURIComponent(
+        `Hi ${s.name},\n\nHere are your login details for "${a.title}":\n\n` +
+        `  Class Code : ${a.accessCode}\n  Your PIN   : ${s.pin}\n\n` +
+        `Open here: ${url}\n\nKeep your PIN private.`
+      );
+      return `mailto:${encodeURIComponent(s.email)}?subject=${subject}&body=${body}`;
+    };
+
+    // ── Build BCC mailto (all students) ──
+    const buildSendAllMailto = () => {
+      const url = window.location.origin + window.location.pathname + '?code=' + a.accessCode;
+      const bcc = withEmail.map(s => encodeURIComponent(s.email)).join(',');
+      const subject = encodeURIComponent(`Peer Assessment "${a.title}" — Your Personal PIN`);
+      const body = encodeURIComponent(
+        `Hi,\n\nYour login details for "${a.title}":\n\n` +
+        `  Class Code : ${a.accessCode}\n  Your PIN   : (see separate message)\n\n` +
+        `Open here: ${url}\n\nKeep your PIN private.`
+      );
+      return `mailto:?bcc=${bcc}&subject=${subject}&body=${body}`;
+    };
+
+    // ── Email panel ──
+    let emailPanel = '';
+    if (hasEmails) {
+      const ejsBtn = emailjsReady
+        ? `<button class="btn-primary" style="font-size:0.78rem; padding:5px 14px;" onclick="sendAllPins()" id="sendAllBtn">
+             ✉️ Send All PINs
+           </button>`
+        : `<span style="font-size:0.75rem; color:var(--text-3); font-style:italic;">
+             Configure EmailJS to send directly →
+           </span>`;
+
+      emailPanel = `
+        <div style="margin-top:14px; border:1.5px solid var(--border); border-radius:var(--radius-sm); overflow:hidden;">
+          <div style="background:var(--surface-2); padding:10px 14px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <div>
+              <span style="font-size:0.85rem; font-weight:600; color:var(--text-2);">📧 Email PINs to Students</span>
+              ${emailjsReady
+                ? `<span style="margin-left:8px; font-size:0.72rem; background:var(--accent-light); color:var(--accent); padding:2px 7px; border-radius:10px; font-weight:600;">EmailJS connected ✓</span>`
+                : `<span style="margin-left:8px; font-size:0.72rem; background:var(--warn-light); color:var(--warn); padding:2px 7px; border-radius:10px; font-weight:600;">EmailJS not configured</span>`}
+            </div>
+            <div style="display:flex; gap:6px; align-items:center;">
+              ${ejsBtn}
+              <a href="${buildSendAllMailto()}" class="btn-secondary" style="font-size:0.78rem; padding:5px 12px; text-decoration:none; display:inline-flex; align-items:center; gap:4px;" title="Opens Outlook with all addresses in BCC">
+                🔗 Open in Outlook (BCC)
+              </a>
+            </div>
           </div>
-          <div style="display:flex; gap:6px;">
-            <button class="btn-secondary" style="font-size:0.8rem; padding:6px 12px;" onclick="document.getElementById('rosterCsvInput').click()">↑ Replace CSV</button>
-            <button class="btn-text" style="font-size:0.8rem;" onclick="clearRoster()">Clear</button>
+          <div id="sendProgressArea" style="display:none; padding:10px 14px; background:var(--accent-light); border-bottom:1px solid var(--border); font-size:0.83rem; color:var(--accent);"></div>
+          <div style="padding:10px 14px; display:flex; flex-direction:column; gap:5px; max-height:240px; overflow-y:auto;">
+            ${withEmail.map(s => `
+              <div id="row-${esc(s.id)}" style="display:flex; align-items:center; gap:10px; padding:7px 10px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--surface); font-size:0.85rem;">
+                <span style="flex:1.2; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(s.name)}</span>
+                <span class="pin-display">🔑 ${esc(s.pin)}</span>
+                <span style="color:var(--text-3); font-size:0.78rem; flex:1.5; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(s.email)}</span>
+                <span id="status-${esc(s.id)}" style="font-size:0.75rem; white-space:nowrap;"></span>
+                ${emailjsReady
+                  ? `<button class="btn-ghost" style="font-size:0.75rem; padding:3px 8px; white-space:nowrap;" onclick="sendOnePinEmail('${esc(s.id)}','${esc(s.name).replace(/'/g,"\\'")}','${esc(s.email)}','${esc(s.pin)}')">Send →</button>`
+                  : `<a href="${buildMailto(s)}" style="color:var(--accent); font-size:0.75rem; text-decoration:none; white-space:nowrap; font-weight:600;">Open in Outlook →</a>`}
+              </div>
+            `).join('')}
+            ${noEmail.length > 0 ? `
+              <p class="muted" style="font-size:0.78rem; margin-top:6px; padding:8px 10px; background:var(--warn-light); border-radius:var(--radius-sm); color:var(--warn);">
+                ⚠️ ${noEmail.length} student${noEmail.length > 1 ? 's have' : ' has'} no email. Re-upload CSV with an email column to include them.
+              </p>` : ''}
           </div>
         </div>
-        <div class="roster-chips">
-          ${roster.map(s => {
-            const isAssigned = assigned.has(s.id);
-            return `<span class="roster-chip ${isAssigned ? 'assigned' : ''}" title="${esc(s.name)} (${esc(s.id)})${isAssigned ? ' — assigned' : ''}">
-              ${isAssigned ? '✓ ' : ''}${esc(s.name)}
-              ${s.id ? `<span class="chip-id">${esc(s.id)}</span>` : ''}
-            </span>`;
-          }).join('')}
+      `;
+    } else {
+      emailPanel = `
+        <div style="margin-top:10px; padding:12px 14px; background:var(--gold-light); border:1px solid rgba(200,134,26,0.2); border-radius:var(--radius-sm); font-size:0.82rem; color:var(--warn); line-height:1.6;">
+          💡 <strong>Want to email PINs directly?</strong><br>
+          Re-upload your CSV with an email column: <code>Name, Email</code> or <code>Name, ID, Email</code>
         </div>
       `;
     }
+
+    panel.innerHTML = `
+      <div class="roster-header">
+        <div class="roster-title">
+          <h4 style="margin:0;">Student Roster</h4>
+          <span class="roster-badge">${roster.length} students</span>
+          ${unassignedCount > 0
+            ? `<span class="roster-badge" style="background:var(--warn-light);color:var(--warn);border-color:rgba(176,92,26,0.2);">${unassignedCount} unassigned</span>`
+            : '<span class="roster-badge">All assigned ✓</span>'}
+        </div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button class="btn-primary" style="font-size:0.8rem; padding:6px 12px;" onclick="exportPinsCsv()">📤 Export PINs CSV</button>
+          <button class="btn-secondary" style="font-size:0.8rem; padding:6px 12px;" onclick="document.getElementById('rosterCsvInput').click()">↑ Replace CSV</button>
+          <button class="btn-text" style="font-size:0.8rem;" onclick="clearRoster()">Clear</button>
+        </div>
+      </div>
+      <div class="roster-chips">
+        ${roster.map(s => {
+          const isAssigned = assigned.has(s.id);
+          return `<span class="roster-chip ${isAssigned ? 'assigned' : ''}" title="${esc(s.name)}${s.email ? ' — ' + esc(s.email) : ''}">
+            ${isAssigned ? '✓ ' : ''}${esc(s.name)}
+            <span class="pin-display">🔑 ${esc(s.pin || '—')}</span>
+          </span>`;
+        }).join('')}
+      </div>
+      ${emailPanel}
+    `;
   }
+
+  window.exportPinsCsv = () => {
+    const a = state.currentAssessment;
+    const roster = a.roster || [];
+    if (roster.length === 0) { alert('No roster loaded.'); return; }
+    const rows = [['Student Name', 'Student ID', 'Email', 'Class Code', 'Personal PIN']];
+    roster.forEach(s => rows.push([s.name, s.id, s.email || '', a.accessCode, s.pin || '']));
+    const csv = rows.map(r => r.map(c => `"${(c+'').replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const el = document.createElement('a');
+    el.href = url; el.download = `${a.title.replace(/[^a-z0-9]/gi,'_')}_student_pins.csv`; el.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // ── EmailJS: send one PIN email ──
+  window.sendOnePinEmail = async (studentId, name, email, pin) => {
+    if (!emailjsReady) { alert('EmailJS not configured. Add your keys to the emailjsConfig object.'); return; }
+    const a = state.currentAssessment;
+    const url = window.location.origin + window.location.pathname + '?code=' + a.accessCode;
+    const statusEl = document.getElementById(`status-${studentId}`);
+    if (statusEl) { statusEl.textContent = '⏳ Sending…'; statusEl.style.color = 'var(--text-3)'; }
+    try {
+      await emailjs.send(emailjsConfig.serviceId, emailjsConfig.templateId, {
+        to_name:           name,
+        to_email:          email,
+        from_name:         emailjsConfig.senderName,   // ← fixes "From" showing student name
+        assessment_title:  a.title,
+        class_code:        a.accessCode,
+        pin:               pin,
+        url:               url,
+      });
+      if (statusEl) { statusEl.textContent = '✓ Sent'; statusEl.style.color = 'var(--accent)'; }
+    } catch (e) {
+      if (statusEl) { statusEl.textContent = '✕ Failed'; statusEl.style.color = 'var(--danger)'; }
+      console.error('EmailJS error for', name, ':', e);
+    }
+  };
+
+  // ── EmailJS: send ALL PIN emails with progress ──
+  window.sendAllPins = async () => {
+    if (!emailjsReady) { alert('EmailJS not configured. Add your keys to the emailjsConfig object.'); return; }
+    const a = state.currentAssessment;
+    const withEmail = (a.roster || []).filter(s => s.email);
+    if (withEmail.length === 0) { alert('No students with email addresses found.'); return; }
+    if (!confirm(`Send PIN emails to ${withEmail.length} student${withEmail.length > 1 ? 's' : ''}?`)) return;
+    const btn = document.getElementById('sendAllBtn');
+    const progressArea = document.getElementById('sendProgressArea');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="loader" style="border-top-color:#fff; border-color:rgba(255,255,255,0.3); border-top-color:#fff;"></span> Sending…'; }
+    if (progressArea) { progressArea.style.display = 'block'; progressArea.textContent = `Sending 0 of ${withEmail.length}…`; }
+    let sent = 0, failed = 0;
+    const url = window.location.origin + window.location.pathname + '?code=' + a.accessCode;
+    for (const s of withEmail) {
+      const statusEl = document.getElementById(`status-${s.id}`);
+      if (statusEl) { statusEl.textContent = '⏳'; statusEl.style.color = 'var(--text-3)'; }
+      try {
+        await emailjs.send(emailjsConfig.serviceId, emailjsConfig.templateId, {
+          to_name:           s.name,
+          to_email:          s.email,
+          from_name:         emailjsConfig.senderName,   // ← fixes "From" showing student name
+          assessment_title:  a.title,
+          class_code:        a.accessCode,
+          pin:               s.pin,
+          url,
+        });
+        sent++;
+        if (statusEl) { statusEl.textContent = '✓ Sent'; statusEl.style.color = 'var(--accent)'; }
+      } catch (e) {
+        failed++;
+        if (statusEl) { statusEl.textContent = '✕ Failed'; statusEl.style.color = 'var(--danger)'; }
+        console.error(`EmailJS failed for ${s.name}:`, e);
+      }
+      if (progressArea) progressArea.textContent = `Sending ${sent + failed} of ${withEmail.length}…`;
+      await new Promise(r => setTimeout(r, 300)); // avoid rate limiting
+    }
+    if (progressArea) {
+      progressArea.textContent = `Done — ${sent} sent${failed > 0 ? `, ${failed} failed (see browser console)` : ' ✓'}`;
+      progressArea.style.background = failed > 0 ? 'var(--warn-light)' : 'var(--accent-light)';
+      progressArea.style.color = failed > 0 ? 'var(--warn)' : 'var(--accent)';
+    }
+    if (btn) { btn.disabled = false; btn.textContent = '✉️ Send All PINs'; }
+  };
 
   window.importRosterCsv = async (event) => {
     const file = event.target.files[0];
@@ -1107,27 +1380,40 @@
     const text = await file.text();
     const rows = text.split(/\r?\n/).map(r => r.trim()).filter(Boolean);
     let startIdx = 0;
-    // Detect header row
     const firstCells = rows[0].split(',').map(c => c.trim().toLowerCase());
     if (firstCells.some(c => ['name','student','id','email'].some(k => c.includes(k)))) startIdx = 1;
+    // Detect column layout by sniffing first data row
+    // Supported: "Name"  |  "Name, Email"  |  "Name, ID, Email"
+    const sniffRow = (rows[startIdx] || '').split(',').map(c => c.trim().replace(/^["']|["']$/g,''));
+    const isEmail = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+    // col2 is email if it looks like one; col3 is email otherwise
+    let nameCol = 0, idCol = -1, emailCol = -1;
+    if (sniffRow.length >= 3 && isEmail(sniffRow[2])) { idCol = 1; emailCol = 2; }
+    else if (sniffRow.length >= 2 && isEmail(sniffRow[1])) { emailCol = 1; }
+    else if (sniffRow.length >= 2) { idCol = 1; }
+
     const roster = [];
     const seen = new Set();
+    const usedPins = new Set();
+    const uniquePin = () => { let p; do { p = genPin(); } while (usedPins.has(p)); usedPins.add(p); return p; };
     for (let i = startIdx; i < rows.length; i++) {
-      const cells = rows[i].split(',').map(c => c.trim().replace(/^["']|["']$/g, ''));
-      const name = cells[0]; if (!name) continue;
-      const id = cells[1] || genId();
+      const cells = rows[i].split(',').map(c => c.trim().replace(/^["']|["']$/g,''));
+      const name = cells[nameCol]; if (!name) continue;
+      const id = (idCol >= 0 && cells[idCol]) ? cells[idCol] : genId();
+      const email = (emailCol >= 0 && cells[emailCol] && isEmail(cells[emailCol])) ? cells[emailCol] : '';
       if (seen.has(id)) continue;
       seen.add(id);
-      roster.push({ id, name });
+      roster.push({ id, name, email, pin: uniquePin() });
     }
     if (roster.length === 0) { alert('No students found in the CSV. Check the format.'); return; }
+    const hasEmails = roster.some(s => s.email);
     const a = state.currentAssessment;
     try {
       await setDoc(doc(db, 'assessments', a.id), { roster }, { merge: true });
       a.roster = roster;
       renderRosterPanel();
       renderGroups();
-      alert(`Roster loaded: ${roster.length} students.`);
+      alert(`Roster loaded: ${roster.length} students${hasEmails ? ' with email addresses' : ''}.\nUse "Export PINs" or "📧 Email PINs" to share login details.`);
     } catch (e) { alert('Error saving roster: ' + e.message); }
   };
 
@@ -1294,10 +1580,12 @@
     if (!name) { alert('Enter a student name.'); return; }
     if (g.members.some(m => m.id === id)) { alert('A student with this ID already exists in the group.'); return; }
     g.members.push({ id, name });
-    // Also add to roster if not already there
+    // Also add to roster with a unique PIN if not already there
     if (!a.roster) a.roster = [];
     if (!a.roster.some(s => s.id === id)) {
-      a.roster.push({ id, name });
+      const usedPins = new Set((a.roster || []).map(s => s.pin));
+      let pin; do { pin = genPin(); } while (usedPins.has(pin));
+      a.roster.push({ id, name, pin });
       await setDoc(doc(db, 'assessments', a.id), { roster: a.roster }, { merge: true });
     }
     try {
@@ -1377,21 +1665,62 @@
     try {
       const snap = await getDocs(collection(db, 'assessments', a.id, 'ratings'));
       const ratings = [];
-      snap.forEach(d => ratings.push(d.data()));
+      snap.forEach(d => ratings.push({ docId: d.id, ...d.data() }));
       const agg = {};
       a.groups.forEach(g => {
         g.members.forEach(m => {
-          agg[m.id] = { id: m.id, name: m.name, groupName: g.name, ratings: [], comments: [] };
+          agg[m.id] = { id: m.id, name: m.name, groupName: g.name, ratings: [], comments: [], locked: false, submitted: false };
         });
       });
+      // Track per-rater lock status: fromId → locked
+      const raterLock = {};
       ratings.forEach(r => {
+        if (r.locked) raterLock[r.fromId] = true;
+        else if (!(r.fromId in raterLock)) raterLock[r.fromId] = false;
         if (agg[r.toId]) {
           agg[r.toId].ratings.push(r.rating);
           if (r.comment && r.comment.trim()) agg[r.toId].comments.push({ from: r.fromName || 'Anonymous', text: r.comment });
         }
       });
+      // Build submitter summary (who submitted and their lock status)
+      const submitters = {};
+      ratings.forEach(r => {
+        if (!submitters[r.fromId]) submitters[r.fromId] = { name: r.fromName, locked: false, count: 0 };
+        submitters[r.fromId].count++;
+        if (r.locked) submitters[r.fromId].locked = true;
+      });
       const sorted = Object.values(agg).sort((x, y) => (x.groupName + x.name).localeCompare(y.groupName + y.name));
       if (sorted.length === 0) { container.innerHTML = '<p class="muted">No students found.</p>'; return; }
+
+      // Submission status panel
+      let statusHtml = `<div style="margin-bottom:20px; border:1.5px solid var(--border); border-radius:var(--radius); overflow:hidden;">
+        <div style="background:var(--surface-2); padding:12px 16px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+          <h3 style="margin:0; font-size:0.82rem;">Submission Status</h3>
+          <span class="muted" style="font-size:0.8rem;">${Object.keys(submitters).length} of ${a.groups.reduce((s,g)=>s+g.members.length,0)} students submitted</span>
+        </div>
+        <div style="padding:12px 16px; display:flex; flex-wrap:wrap; gap:8px;">`;
+      // Show all group members with their status
+      a.groups.forEach(g => {
+        g.members.forEach(m => {
+          const sub = submitters[m.id];
+          if (sub) {
+            statusHtml += `<div style="display:flex; align-items:center; gap:8px; padding:7px 12px; border:1.5px solid var(--border); border-radius:var(--radius-sm); background:var(--surface); font-size:0.85rem;">
+              <span>${esc(m.name)}</span>
+              <span class="lock-badge ${sub.locked ? 'locked' : 'partial'}">${sub.locked ? '🔒 Locked' : '⏳ Partial'}</span>
+              ${sub.locked
+                ? `<button class="btn-ghost" style="font-size:0.75rem; padding:3px 8px; color:var(--warn);" onclick="unlockStudent('${esc(m.id)}')">Unlock</button>`
+                : ''}
+            </div>`;
+          } else {
+            statusHtml += `<div style="display:flex; align-items:center; gap:8px; padding:7px 12px; border:1.5px solid var(--border); border-radius:var(--radius-sm); background:var(--surface-2); font-size:0.85rem; color:var(--text-3);">
+              <span>${esc(m.name)}</span>
+              <span class="lock-badge unlocked">Not submitted</span>
+            </div>`;
+          }
+        });
+      });
+      statusHtml += '</div></div>';
+
       let html = `<div class="results-table-wrap"><table>
         <thead><tr><th>Group</th><th>Student</th><th>Avg</th><th>Ratings</th><th>Count</th><th>Comments</th></tr></thead>
         <tbody>`;
@@ -1411,11 +1740,27 @@
         </tr>`;
       });
       html += '</tbody></table></div>';
-      container.innerHTML = html;
+      container.innerHTML = statusHtml + html;
       state.lastResults = sorted;
     } catch (e) {
       container.innerHTML = `<div class="status error">Error: ${esc(e.message)}</div>`;
     }
+  };
+
+  window.unlockStudent = async (fromId) => {
+    const a = state.currentAssessment;
+    if (!confirm('Unlock this student so they can edit and resubmit their ratings?')) return;
+    try {
+      const snap = await getDocs(query(
+        collection(db, 'assessments', a.id, 'ratings'),
+        where('fromId', '==', fromId)
+      ));
+      const batch = writeBatch(db);
+      snap.forEach(d => batch.update(d.ref, { locked: false }));
+      await batch.commit();
+      await loadResults(); // await so table refreshes before alert
+      alert('Student unlocked. They can now resubmit their ratings.');
+    } catch (e) { alert('Error unlocking: ' + e.message); }
   };
 
   window.exportResultsCsv = () => {
@@ -1444,6 +1789,34 @@
     setTimeout(() => go('student-entry'), 100);
   }
 
+  // Wire up PIN digit inputs (auto-advance, backspace, paste)
+  // Guard prevents duplicate listeners if student goes back and re-enters code
+  function wirePinInputs() {
+    const digits = [0,1,2,3].map(i => document.getElementById(`pin${i}`));
+    // Clear values on fresh open
+    digits.forEach(inp => { inp.value = ''; });
+    // Skip if already wired this session
+    if (digits[0].dataset.wired === '1') return;
+    digits[0].dataset.wired = '1';
+    digits.forEach((inp, i) => {
+      inp.addEventListener('input', () => {
+        inp.value = inp.value.replace(/\D/g,'').slice(-1);
+        if (inp.value && i < 3) digits[i+1].focus();
+      });
+      inp.addEventListener('keydown', e => {
+        if (e.key === 'Backspace' && !inp.value && i > 0) digits[i-1].focus();
+        if (e.key === 'Enter') studentVerifyPin();
+      });
+      inp.addEventListener('paste', e => {
+        e.preventDefault();
+        const pasted = (e.clipboardData.getData('text') || '').replace(/\D/g,'').slice(0,4);
+        pasted.split('').forEach((ch, idx) => { if (digits[idx]) digits[idx].value = ch; });
+        const focusIdx = Math.min(pasted.length, 3);
+        if (digits[focusIdx]) digits[focusIdx].focus();
+      });
+    });
+  }
+
   window.studentFindAssessment = async () => {
     const code = document.getElementById('studentAccessCode').value.trim().toUpperCase();
     if (code.length !== 6) { showStatus('studentEntryStatus', 'Please enter a 6-character access code.', 'error'); return; }
@@ -1453,93 +1826,101 @@
       const snap = await getDocs(q);
       if (snap.empty) { showStatus('studentEntryStatus', 'Invalid access code. Check with your teacher.', 'error'); return; }
       const aDoc = snap.docs[0], aData = aDoc.data();
-      const gSnap = await getDocs(collection(db, 'assessments', aDoc.id, 'groups'));
-      const groups = [];
-      gSnap.forEach(g => groups.push({ id: g.id, ...g.data() }));
-      const allMembers = [];
-      groups.forEach(g => (g.members || []).forEach(m => allMembers.push({ ...m, groupId: g.id, groupName: g.name })));
-      if (allMembers.length === 0) {
+      const roster = aData.roster || [];
+      if (roster.length === 0) {
         showStatus('studentEntryStatus', 'No students registered yet. Ask your teacher to set up the groups.', 'error');
         return;
       }
-      const sel = document.getElementById('studentSelectName');
-      sel.innerHTML = '<option value="">— Choose your name —</option>';
-      const groupsMap = {};
-      allMembers.forEach(m => { if (!groupsMap[m.groupName]) groupsMap[m.groupName] = []; groupsMap[m.groupName].push(m); });
-      Object.keys(groupsMap).sort().forEach(gn => {
-        const og = document.createElement('optgroup');
-        og.label = gn;
-        groupsMap[gn].forEach(m => {
-          const opt = document.createElement('option');
-          opt.value = JSON.stringify({ groupId: m.groupId, groupName: m.groupName, id: m.id, name: m.name });
-          opt.textContent = m.name;
-          og.appendChild(opt);
-        });
-        sel.appendChild(og);
-      });
-      state.studentContext = { assessmentId: aDoc.id, assessmentTitle: aData.title, maxRating: aData.maxRating, groups };
-      document.getElementById('studentSelectTitle').textContent = aData.title;
-      document.getElementById('studentSelectSubtitle').textContent = 'Select your name from the list below to continue.';
+      const gSnap = await getDocs(collection(db, 'assessments', aDoc.id, 'groups'));
+      const groups = [];
+      gSnap.forEach(g => groups.push({ id: g.id, ...g.data() }));
+      state.studentContext = {
+        assessmentId: aDoc.id, assessmentTitle: aData.title,
+        maxRating: aData.maxRating, groups, roster
+      };
+      document.getElementById('studentPinTitle').textContent = aData.title;
+      document.getElementById('studentPinSubtitle').textContent =
+        'Enter the 4-digit personal PIN your teacher gave you.';
       showStatus('studentEntryStatus', '', 'info');
-      go('student-select');
+      go('student-pin');
+      setTimeout(() => { wirePinInputs(); document.getElementById('pin0').focus(); }, 50);
     } catch (e) { showStatus('studentEntryStatus', 'Error: ' + e.message, 'error'); }
   };
 
-  window.studentEnterRating = async () => {
-    const selVal = document.getElementById('studentSelectName').value;
-    if (!selVal) { showStatus('studentSelectStatus', 'Please select your name.', 'error'); return; }
-    const selected = JSON.parse(selVal);
+  window.studentVerifyPin = async () => {
+    const pin = [0,1,2,3].map(i => document.getElementById(`pin${i}`).value).join('');
+    if (pin.length !== 4) { showStatus('studentPinStatus', 'Enter all 4 digits of your PIN.', 'error'); return; }
     const ctx = state.studentContext;
-    const myGroup = ctx.groups.find(g => g.id === selected.groupId);
-    if (!myGroup) { showStatus('studentSelectStatus', 'Group not found.', 'error'); return; }
+    // Find student in roster by PIN
+    const student = (ctx.roster || []).find(s => s.pin === pin);
+    if (!student) {
+      showStatus('studentPinStatus', 'Incorrect PIN. Please check with your teacher.', 'error');
+      [0,1,2,3].forEach(i => document.getElementById(`pin${i}`).value = '');
+      document.getElementById('pin0').focus();
+      return;
+    }
+    // Find their group
+    let myGroup = null, myGroupId = null, myGroupName = null;
+    for (const g of ctx.groups) {
+      if ((g.members || []).some(m => m.id === student.id)) {
+        myGroup = g; myGroupId = g.id; myGroupName = g.name; break;
+      }
+    }
+    if (!myGroup) {
+      showStatus('studentPinStatus', `Hi ${student.name}! You have been verified, but you haven't been assigned to a group yet. Please ask your teacher.`, 'warn');
+      return;
+    }
+    // Check if already submitted and locked
     try {
+      showStatus('studentPinStatus', 'Verified! Loading…', 'success');
       const rSnap = await getDocs(query(
         collection(db, 'assessments', ctx.assessmentId, 'ratings'),
-        where('fromId', '==', selected.id)
+        where('fromId', '==', student.id)
       ));
-      if (!rSnap.empty && !confirm('You have already submitted ratings. View or update them?')) return;
+      const isLocked = rSnap.docs.some(d => d.data().locked === true);
+      if (isLocked) {
+        showStatus('studentPinStatus',
+          `Hi ${student.name}! Your ratings are already submitted and locked. Contact your teacher if you need to make changes.`, 'warn');
+        return;
+      }
+      if (!rSnap.empty && !confirm(`Hi ${student.name}! You have a partial submission. Continue editing?`)) return;
       const existing = {};
       rSnap.forEach(d => { const data = d.data(); existing[data.toId] = data; });
-      state.studentContext.myId = selected.id;
-      state.studentContext.myName = selected.name;
-      state.studentContext.groupId = selected.groupId;
-      state.studentContext.groupName = selected.groupName;
+      state.studentContext.myId = student.id;
+      state.studentContext.myName = student.name;
+      state.studentContext.groupId = myGroupId;
+      state.studentContext.groupName = myGroupName;
       state.studentContext.existing = existing;
-      const toRate = myGroup.members.filter(m => m.id !== selected.id);
+      const toRate = myGroup.members.filter(m => m.id !== student.id);
       if (toRate.length === 0) {
-        showStatus('studentSelectStatus', 'You have no group members to rate.', 'info'); return;
+        showStatus('studentPinStatus', 'You have no group members to rate yet.', 'info'); return;
       }
       document.getElementById('studentRatingTitle').textContent = ctx.assessmentTitle;
       document.getElementById('studentRatingSubtitle').textContent =
-        `Hi ${selected.name} — rate your ${myGroup.name} teammates below.`;
+        `Hi ${student.name} — rate your ${myGroupName} teammates below.`;
       buildRatingForm(toRate, ctx.maxRating, existing);
-      showStatus('studentSelectStatus', '', 'info');
+      showStatus('studentPinStatus', '', 'info');
       go('student-rating');
-    } catch (e) { showStatus('studentSelectStatus', 'Error: ' + e.message, 'error'); }
+    } catch (e) { showStatus('studentPinStatus', 'Error: ' + e.message, 'error'); }
   };
 
   // ── Build Rating Form ──
-  // Uses segmented number buttons instead of fragile star CSS
   function buildRatingForm(toRate, maxRating, existing) {
     const form = document.getElementById('studentRatingForm');
     form.innerHTML = '';
-    toRate.forEach((m, idx) => {
+    toRate.forEach((m) => {
       const prior = existing[m.id];
       const priorRating = prior ? prior.rating : 0;
       const priorComment = prior ? (prior.comment || '') : '';
-
       const card = document.createElement('div');
       card.className = 'rating-card' + (priorRating ? ' rated' : '');
       card.dataset.toid = m.id;
       card.dataset.toname = m.name;
       card.dataset.rating = priorRating;
-
-      // Build buttons
       let btnsHtml = '';
       for (let i = 1; i <= maxRating; i++) {
         btnsHtml += `<button type="button" class="rating-btn${priorRating === i ? ' selected' : ''}" data-val="${i}">${i}</button>`;
       }
-
       card.innerHTML = `
         <div class="student-name">${esc(m.name)}</div>
         <span class="label" style="margin-top:0;">Rating</span>
@@ -1548,8 +1929,6 @@
         <span class="label">Comment <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-3);">(optional)</span></span>
         <textarea placeholder="Any feedback on ${esc(m.name)}'s contribution…">${esc(priorComment)}</textarea>
       `;
-
-      // Attach rating button click events
       card.querySelectorAll('.rating-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const val = parseInt(btn.dataset.val);
@@ -1559,7 +1938,6 @@
           updateProgress(toRate.length);
         });
       });
-
       form.appendChild(card);
     });
     updateProgress(toRate.length);
@@ -1605,6 +1983,7 @@
           toId: r.toId, toName: r.toName,
           groupId: ctx.groupId,
           rating: r.rating, comment: r.comment || '',
+          locked: true,          // 🔒 locked after first submission
           submittedAt: serverTimestamp()
         });
       }
