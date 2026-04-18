@@ -1,0 +1,1624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Peer Rating System</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #f4f1ec;
+    --surface: #fdfcfa;
+    --surface-2: #f8f5f0;
+    --border: #e4ddd4;
+    --border-strong: #c9bfb2;
+    --text: #1a1714;
+    --text-2: #6b6259;
+    --text-3: #9a9087;
+    --accent: #1a6b5a;
+    --accent-light: #e8f3f0;
+    --accent-mid: #2d9978;
+    --warn: #b05c1a;
+    --warn-light: #fef3ea;
+    --danger: #b01a2e;
+    --danger-light: #fdeaed;
+    --gold: #c8861a;
+    --gold-light: #fef6e8;
+    --header-bg: #1a1714;
+    --header-text: #f4f1ec;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --shadow: 0 1px 4px rgba(26,23,20,0.06), 0 4px 16px rgba(26,23,20,0.06);
+    --shadow-lg: 0 4px 8px rgba(26,23,20,0.08), 0 12px 40px rgba(26,23,20,0.10);
+    --transition: 0.18s ease;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--header-bg);
+    color: var(--header-text);
+    padding: 0 28px;
+    height: 58px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  header .logo {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.15rem;
+    letter-spacing: 0.01em;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+  header .logo span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px; height: 28px;
+    background: var(--accent);
+    border-radius: 6px;
+    font-size: 0.85rem;
+  }
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.82rem;
+    color: rgba(244,241,236,0.6);
+  }
+  .user-info strong { color: var(--header-text); }
+
+  /* ── MAIN ── */
+  main { max-width: 860px; margin: 0 auto; padding: 32px 20px 60px; }
+
+  /* ── VIEWS ── */
+  .view { animation: fadeUp 0.22s ease; }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .hidden { display: none !important; }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+  }
+  .card-sm { max-width: 480px; margin-left: auto; margin-right: auto; }
+
+  /* ── TYPOGRAPHY ── */
+  h1 { font-family: 'DM Serif Display', serif; font-size: 2rem; font-weight: 400; }
+  h2 { font-family: 'DM Serif Display', serif; font-size: 1.5rem; font-weight: 400; margin-bottom: 18px; color: var(--text); }
+  h3 { font-size: 0.95rem; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 14px; }
+  h4 { font-size: 1rem; font-weight: 600; margin-bottom: 4px; }
+  .muted { color: var(--text-3); font-size: 0.85rem; }
+  .label { display: block; font-size: 0.82rem; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; margin-top: 14px; }
+
+  /* ── INPUTS ── */
+  input[type=text], input[type=email], input[type=password], input[type=number], textarea, select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 0.93rem;
+    font-family: 'DM Sans', sans-serif;
+    background: var(--surface);
+    color: var(--text);
+    transition: border-color var(--transition), box-shadow var(--transition);
+    appearance: none;
+  }
+  input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(26,107,90,0.12);
+  }
+  textarea { min-height: 75px; resize: vertical; }
+  select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239a9087' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px; }
+
+  /* ── BUTTONS ── */
+  button {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 600;
+    padding: 9px 18px;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: var(--accent-mid); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(26,107,90,0.25); }
+  .btn-secondary { background: var(--surface-2); color: var(--text); border: 1.5px solid var(--border); }
+  .btn-secondary:hover:not(:disabled) { background: var(--border); }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-danger:hover:not(:disabled) { background: #8b0e1f; }
+  .btn-ghost { background: transparent; color: var(--accent); padding: 6px 10px; }
+  .btn-ghost:hover:not(:disabled) { background: var(--accent-light); }
+  .btn-text { background: transparent; color: var(--text-3); padding: 6px 10px; font-weight: 400; }
+  .btn-text:hover:not(:disabled) { color: var(--text); }
+  button:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; align-items: center; }
+
+  /* ── ROLE CHOICE HOME ── */
+  .role-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 10px; }
+  @media (max-width: 540px) { .role-grid { grid-template-columns: 1fr; } }
+  .role-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 30px 26px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    box-shadow: var(--shadow);
+    position: relative;
+    overflow: hidden;
+  }
+  .role-card::before {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transition: transform 0.2s ease;
+  }
+  .role-card:hover { border-color: var(--accent); transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+  .role-card:hover::before { transform: scaleX(1); }
+  .role-card .role-icon { font-size: 2.4rem; margin-bottom: 12px; display: block; }
+  .role-card h2 { font-size: 1.2rem; margin-bottom: 8px; }
+  .role-card p { font-size: 0.85rem; color: var(--text-2); line-height: 1.5; }
+
+  /* ── STATUS MESSAGES ── */
+  .status {
+    padding: 11px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 0.87rem;
+    margin-bottom: 14px;
+    border: 1.5px solid;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .status.error { background: var(--danger-light); color: var(--danger); border-color: rgba(176,26,46,0.2); }
+  .status.success { background: var(--accent-light); color: var(--accent); border-color: rgba(26,107,90,0.2); }
+  .status.info { background: var(--gold-light); color: var(--warn); border-color: rgba(176,92,26,0.2); }
+  .status.warn { background: var(--warn-light); color: var(--warn); border-color: rgba(176,92,26,0.2); }
+
+  /* ── ASSESSMENT LIST ── */
+  .assessment-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 8px;
+    background: var(--surface-2);
+    gap: 12px;
+    flex-wrap: wrap;
+    transition: border-color var(--transition);
+  }
+  .assessment-item:hover { border-color: var(--border-strong); }
+  .assessment-item .actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+  /* ── CODE BADGE ── */
+  .code-badge {
+    display: inline-block;
+    background: var(--header-bg);
+    color: var(--header-text);
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: 3px;
+  }
+
+  /* ── GROUP BOXES ── */
+  .group-box {
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 14px;
+    overflow: hidden;
+    background: var(--surface);
+  }
+  .group-header {
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .group-header input[type=text] {
+    font-weight: 600;
+    font-size: 0.95rem;
+    max-width: 240px;
+    padding: 6px 10px;
+    border: 1.5px solid transparent;
+    background: transparent;
+  }
+  .group-header input[type=text]:hover { border-color: var(--border); background: var(--surface); }
+  .group-body { padding: 14px 16px; }
+  .member-list { list-style: none; margin-bottom: 12px; }
+  .member-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 9px 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+    gap: 10px;
+  }
+  .member-list li .member-id { color: var(--text-3); font-size: 0.8rem; }
+  .member-list li .remove-btn {
+    color: var(--danger);
+    cursor: pointer;
+    font-size: 1.2rem;
+    line-height: 1;
+    background: none;
+    border: none;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: background var(--transition);
+  }
+  .member-list li .remove-btn:hover { background: var(--danger-light); }
+  .add-member-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .add-member-row input { flex: 1; min-width: 120px; }
+  .add-member-row button { flex-shrink: 0; }
+
+  /* ── TABS ── */
+  .tab-bar {
+    display: flex;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 22px;
+    gap: 4px;
+  }
+  .tab-btn {
+    padding: 9px 16px;
+    border: none;
+    background: none;
+    color: var(--text-2);
+    font-size: 0.88rem;
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    border-radius: 0;
+    transition: all var(--transition);
+    letter-spacing: 0;
+  }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  .tab-btn:hover:not(.active) { color: var(--text); background: var(--surface-2); }
+
+  /* ── RATING CARDS ── */
+  .rating-card {
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 12px;
+    background: var(--surface);
+    transition: border-color var(--transition), box-shadow var(--transition);
+    position: relative;
+  }
+  .rating-card.rated { border-color: var(--accent); }
+  .rating-card.rated::after {
+    content: '✓';
+    position: absolute;
+    top: 12px; right: 14px;
+    width: 22px; height: 22px;
+    background: var(--accent);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+  .rating-card .student-name {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.15rem;
+    margin-bottom: 14px;
+    color: var(--text);
+  }
+
+  /* ── SEGMENTED RATING BUTTONS ── */
+  .rating-scale {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin: 8px 0 14px;
+  }
+  .rating-btn {
+    width: 44px; height: 44px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+    color: var(--text-2);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    flex-shrink: 0;
+  }
+  .rating-btn:hover:not(:disabled) {
+    border-color: var(--accent);
+    background: var(--accent-light);
+    color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .rating-btn.selected {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(26,107,90,0.3);
+  }
+  .rating-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.73rem;
+    color: var(--text-3);
+    margin-top: -8px;
+    margin-bottom: 10px;
+    padding: 0 2px;
+  }
+
+  /* ── PROGRESS BAR ── */
+  .progress-wrap { margin-bottom: 22px; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 0.82rem; color: var(--text-2); margin-bottom: 8px; }
+  .progress-bar { height: 5px; background: var(--border); border-radius: 99px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 99px; transition: width 0.4s ease; }
+
+  /* ── RESULTS TABLE ── */
+  .results-table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  th {
+    padding: 11px 14px;
+    text-align: left;
+    background: var(--surface-2);
+    border-bottom: 2px solid var(--border);
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-2);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+  }
+  td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface-2); }
+  .avg-score {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 38px;
+    padding: 4px 8px;
+    border-radius: 5px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    background: var(--accent-light);
+    color: var(--accent);
+  }
+  .comment-pills { display: flex; flex-direction: column; gap: 4px; }
+  .comment-pill {
+    font-size: 0.8rem;
+    color: var(--text-2);
+    padding: 4px 8px;
+    background: var(--surface-2);
+    border-left: 3px solid var(--accent);
+    border-radius: 2px;
+    line-height: 1.4;
+  }
+
+  /* ── ROSTER SECTION ── */
+  .roster-panel {
+    border: 2px dashed var(--border-strong);
+    border-radius: var(--radius);
+    padding: 22px 20px;
+    margin-bottom: 22px;
+    background: var(--surface-2);
+    transition: border-color var(--transition), background var(--transition);
+  }
+  .roster-panel.has-roster {
+    border-style: solid;
+    border-color: var(--border);
+    background: var(--surface);
+  }
+  .roster-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .roster-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .roster-badge {
+    display: inline-flex;
+    align-items: center;
+    background: var(--accent-light);
+    color: var(--accent);
+    border: 1px solid rgba(26,107,90,0.2);
+    border-radius: 20px;
+    padding: 2px 10px;
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+  .roster-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    max-height: 160px;
+    overflow-y: auto;
+    padding: 2px;
+  }
+  .roster-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    font-size: 0.82rem;
+    color: var(--text);
+    transition: border-color var(--transition);
+  }
+  .roster-chip.assigned {
+    background: var(--surface-2);
+    color: var(--text-3);
+    border-color: var(--border);
+  }
+  .roster-chip .chip-id {
+    font-size: 0.72rem;
+    color: var(--text-3);
+  }
+
+  /* ── UPLOAD DROP ZONE ── */
+  .drop-zone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 28px 20px;
+    cursor: pointer;
+  }
+  .drop-zone .drop-icon { font-size: 2rem; opacity: 0.5; }
+  .drop-zone p { color: var(--text-2); font-size: 0.88rem; text-align: center; }
+  .drop-zone strong { color: var(--accent); }
+
+  /* ── ADD MEMBER PANEL ── */
+  .add-member-panel {
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    margin-top: 10px;
+  }
+  .add-member-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-2);
+  }
+  .add-member-tab {
+    flex: 1;
+    padding: 8px 12px;
+    border: none;
+    background: transparent;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-3);
+    cursor: pointer;
+    transition: all var(--transition);
+    text-align: center;
+    border-radius: 0;
+  }
+  .add-member-tab.active {
+    background: var(--surface);
+    color: var(--accent);
+    border-bottom: 2px solid var(--accent);
+    margin-bottom: -1px;
+  }
+  .add-member-body { padding: 14px; background: var(--surface); }
+  .roster-select-list {
+    max-height: 200px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-bottom: 10px;
+  }
+  .roster-select-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition);
+    background: var(--surface-2);
+  }
+  .roster-select-item:hover { border-color: var(--accent); background: var(--accent-light); }
+  .roster-select-item.already-added {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+  .roster-select-item input[type=checkbox] { accent-color: var(--accent); width:15px; height:15px; cursor:pointer; }
+  .roster-select-item .ris-name { font-size: 0.88rem; font-weight: 500; flex: 1; }
+  .roster-select-item .ris-id { font-size: 0.75rem; color: var(--text-3); }
+  .roster-search {
+    margin-bottom: 8px;
+  }
+
+  /* ── SETUP WARNING ── */
+  .setup-warning {
+    background: var(--warn-light);
+    color: var(--warn);
+    border: 1.5px solid rgba(176,92,26,0.25);
+    padding: 14px 18px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 18px;
+    font-size: 0.88rem;
+  }
+
+  /* ── LOADER ── */
+  .loader {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── HERO (home) ── */
+  .home-hero {
+    text-align: center;
+    padding: 24px 0 32px;
+  }
+  .home-hero h1 {
+    font-size: 2.6rem;
+    margin-bottom: 10px;
+    color: var(--text);
+  }
+  .home-hero p {
+    color: var(--text-2);
+    font-size: 1rem;
+    max-width: 440px;
+    margin: 0 auto 32px;
+  }
+
+  /* ── DONE SCREEN ── */
+  .done-screen {
+    text-align: center;
+    padding: 30px 20px;
+  }
+  .done-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 72px; height: 72px;
+    background: var(--accent-light);
+    border-radius: 50%;
+    font-size: 2rem;
+    margin-bottom: 20px;
+    border: 2px solid rgba(26,107,90,0.2);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <span>📋</span>
+    Peer Rating System
+  </div>
+  <div class="user-info" id="userInfo"></div>
+</header>
+
+<main id="main">
+  <div id="setupWarning" class="setup-warning hidden">
+    ⚠️ <strong>Firebase not configured.</strong> Replace the <code>firebaseConfig</code> in the script with your project's config.
+  </div>
+
+  <!-- HOME -->
+  <div id="view-home" class="view">
+    <div class="home-hero">
+      <h1>Peer Assessment</h1>
+      <p>Rate your teammates fairly and help your teacher understand group dynamics.</p>
+      <div class="role-grid" style="max-width:520px; margin:0 auto;">
+        <div class="role-card" onclick="go('teacher-login')">
+          <span class="role-icon">👨‍🏫</span>
+          <h2>Teacher</h2>
+          <p>Create assessments, manage groups, view and export ratings</p>
+        </div>
+        <div class="role-card" onclick="go('student-entry')">
+          <span class="role-icon">👨‍🎓</span>
+          <h2>Student</h2>
+          <p>Enter an access code and rate your group members</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TEACHER LOGIN -->
+  <div id="view-teacher-login" class="view hidden">
+    <div class="card card-sm" style="margin-top:32px;">
+      <h2>Teacher Login</h2>
+      <div id="loginStatus"></div>
+      <label class="label">Email</label>
+      <input type="email" id="loginEmail" autocomplete="email" placeholder="you@school.edu" />
+      <label class="label">Password</label>
+      <input type="password" id="loginPassword" autocomplete="current-password" placeholder="Min. 6 characters" />
+      <div class="btn-row">
+        <button class="btn-primary" onclick="doLogin()">Login</button>
+        <button class="btn-secondary" onclick="doSignup()">Create Account</button>
+        <button class="btn-ghost" onclick="go('home')">← Back</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TEACHER DASHBOARD -->
+  <div id="view-dashboard" class="view hidden">
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+        <h2 style="margin-bottom:0;">My Assessments</h2>
+        <button class="btn-primary" onclick="go('create-assessment')">+ New Assessment</button>
+      </div>
+      <div id="assessmentList" style="margin-top:18px;">
+        <p class="muted">Loading…</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- CREATE ASSESSMENT -->
+  <div id="view-create-assessment" class="view hidden">
+    <div class="card card-sm">
+      <h2>New Assessment</h2>
+      <label class="label">Title</label>
+      <input type="text" id="newAssessmentTitle" placeholder="e.g. Group Project 1" />
+      <label class="label">Rating Scale (1 to N)</label>
+      <input type="number" id="newAssessmentMax" value="5" min="2" max="10" />
+      <p class="muted" style="margin-top:6px;">Students will rate peers from 1 (lowest) to this number.</p>
+      <div class="btn-row">
+        <button class="btn-primary" onclick="createAssessment()">Create Assessment</button>
+        <button class="btn-ghost" onclick="go('dashboard')">← Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDIT ASSESSMENT -->
+  <div id="view-edit-assessment" class="view hidden">
+    <div class="card">
+      <button class="btn-ghost" style="margin-bottom:10px;" onclick="go('dashboard')">← Dashboard</button>
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px; margin-bottom:6px;">
+        <h2 id="editAssessmentTitle" style="margin-bottom:0;"></h2>
+        <div style="text-align:right;">
+          <span id="editAssessmentCode" class="code-badge"></span>
+        </div>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px;">
+        <button class="btn-secondary" onclick="copyAccessCode()">📋 Copy Code</button>
+        <button class="btn-secondary" onclick="copyStudentLink()">🔗 Copy Student Link</button>
+      </div>
+
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchEditTab('groups', this)">Groups &amp; Students</button>
+        <button class="tab-btn" onclick="switchEditTab('results', this)">Results</button>
+      </div>
+
+      <!-- GROUPS TAB -->
+      <div id="editTab-groups">
+
+        <!-- STEP 1: ROSTER -->
+        <h3 style="margin-bottom:10px;">Step 1 — Student Roster</h3>
+        <div id="rosterPanel" class="roster-panel">
+          <!-- empty state shown by JS -->
+        </div>
+        <input type="file" id="rosterCsvInput" accept=".csv" style="display:none" onchange="importRosterCsv(event)" />
+
+        <!-- STEP 2: GROUPS -->
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+          <h3 style="margin-bottom:0;">Step 2 — Groups</h3>
+          <button class="btn-primary" onclick="addGroup()">+ Add Group</button>
+        </div>
+        <div id="groupsContainer"></div>
+      </div>
+
+      <!-- RESULTS TAB -->
+      <div id="editTab-results" class="hidden">
+        <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
+          <button class="btn-primary" onclick="exportResultsCsv()">📤 Export CSV</button>
+          <button class="btn-secondary" onclick="loadResults()">↻ Refresh</button>
+        </div>
+        <div id="resultsContainer"><p class="muted">Loading results…</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STUDENT ENTRY -->
+  <div id="view-student-entry" class="view hidden">
+    <div class="card card-sm" style="margin-top:32px;">
+      <h2>Enter Access Code</h2>
+      <p class="muted" style="margin-bottom:16px;">Your teacher will give you a 6-character code.</p>
+      <div id="studentEntryStatus"></div>
+      <label class="label">Access Code</label>
+      <input type="text" id="studentAccessCode" placeholder="e.g. ABC123" style="text-transform:uppercase; font-size:1.3rem; letter-spacing:3px; text-align:center; font-family:'Courier New',monospace; font-weight:700;" maxlength="6" />
+      <div class="btn-row">
+        <button class="btn-primary" onclick="studentFindAssessment()">Continue →</button>
+        <button class="btn-ghost" onclick="go('home')">← Back</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STUDENT SELECT NAME -->
+  <div id="view-student-select" class="view hidden">
+    <div class="card card-sm" style="margin-top:32px;">
+      <h2 id="studentSelectTitle">Who are you?</h2>
+      <p class="muted" id="studentSelectSubtitle" style="margin-bottom:16px;"></p>
+      <div id="studentSelectStatus"></div>
+      <label class="label">Select Your Name</label>
+      <select id="studentSelectName">
+        <option value="">— Choose your name —</option>
+      </select>
+      <div class="btn-row">
+        <button class="btn-primary" onclick="studentEnterRating()">Continue to Rating →</button>
+        <button class="btn-ghost" onclick="go('student-entry')">← Back</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STUDENT RATING -->
+  <div id="view-student-rating" class="view hidden">
+    <div class="card">
+      <h2 id="studentRatingTitle"></h2>
+      <p class="muted" id="studentRatingSubtitle" style="margin-bottom:20px;"></p>
+      <div class="progress-wrap">
+        <div class="progress-label">
+          <span id="progressText">Rate your teammates</span>
+          <span id="progressCount"></span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+      </div>
+      <div id="studentRatingStatus"></div>
+      <div id="studentRatingForm"></div>
+      <div class="btn-row">
+        <button class="btn-primary" onclick="submitRatings()" id="submitRatingsBtn">Submit All Ratings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STUDENT DONE -->
+  <div id="view-student-done" class="view hidden">
+    <div class="card card-sm" style="margin-top:32px;">
+      <div class="done-screen">
+        <div class="done-icon">✅</div>
+        <h2>Ratings Submitted!</h2>
+        <p style="color:var(--text-2); margin-bottom:24px;">Your responses have been recorded. Thanks for participating honestly.</p>
+        <button class="btn-secondary" onclick="go('home')">Return Home</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- ============ FIREBASE CONFIG & APP LOGIC ============ -->
+<script type="module">
+  // =====================================================
+  // 1. REPLACE WITH YOUR FIREBASE PROJECT CONFIG
+  // =====================================================
+  const firebaseConfig = {
+    apiKey: "AIzaSyDsci9w7Z-tBJbk0FtabtXKF4wRYud5S9Q",
+    authDomain: "peer-rating-system-c984f.firebaseapp.com",
+    projectId: "peer-rating-system-c984f",
+    storageBucket: "peer-rating-system-c984f.firebasestorage.app",
+    messagingSenderId: "53744415526",
+    appId: "1:53744415526:web:d5cdddeb450fa4656a07e7"
+  };
+  // =====================================================
+
+  if (firebaseConfig.apiKey === "YOUR_API_KEY") {
+    document.getElementById('setupWarning').classList.remove('hidden');
+  }
+
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+  import {
+    getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
+    onAuthStateChanged, signOut
+  } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+  import {
+    getFirestore, collection, doc, addDoc, setDoc, getDoc, getDocs,
+    query, where, deleteDoc, serverTimestamp, writeBatch
+  } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  let state = {
+    user: null,
+    assessments: [],
+    currentAssessment: null,
+    studentContext: null
+  };
+
+  // ── Utilities ──
+  const genCode = () => {
+    const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+    return Array.from({length: 6}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  };
+  const genId = () => Math.random().toString(36).substring(2, 10);
+  const esc = s => (s || '').toString().replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  function showStatus(elId, msg, type='info') {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    if (!msg) { el.innerHTML = ''; return; }
+    const icons = { error: '✕', success: '✓', info: 'ℹ', warn: '⚠' };
+    el.innerHTML = `<div class="status ${type}"><span>${icons[type]||'ℹ'}</span><span>${esc(msg)}</span></div>`;
+  }
+
+  // ── View routing ──
+  const views = ['home','teacher-login','dashboard','create-assessment','edit-assessment',
+                 'student-entry','student-select','student-rating','student-done'];
+
+  function go(view) {
+    views.forEach(v => {
+      const el = document.getElementById('view-' + v);
+      if (el) el.classList.toggle('hidden', v !== view);
+    });
+    if (view === 'dashboard') loadAssessments();
+    if (view === 'edit-assessment') renderEditAssessment();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  window.go = go;
+
+  // ── Auth ──
+  onAuthStateChanged(auth, (user) => {
+    state.user = user;
+    renderUserInfo();
+    if (user && !state.studentContext) go('dashboard');
+    else if (!user && !state.studentContext) go('home');
+  });
+
+  function renderUserInfo() {
+    const el = document.getElementById('userInfo');
+    if (state.user) {
+      el.innerHTML = `<strong>${esc(state.user.email)}</strong>
+        <button class="btn-ghost" style="color:rgba(244,241,236,0.7); font-size:0.8rem;" onclick="logout()">Sign out</button>`;
+    } else {
+      el.innerHTML = '';
+    }
+  }
+
+  window.doLogin = async () => {
+    const email = document.getElementById('loginEmail').value.trim();
+    const pw = document.getElementById('loginPassword').value;
+    if (!email || !pw) { showStatus('loginStatus', 'Please enter your email and password.', 'error'); return; }
+    try {
+      showStatus('loginStatus', 'Signing in…', 'info');
+      await signInWithEmailAndPassword(auth, email, pw);
+    } catch (e) { showStatus('loginStatus', e.message, 'error'); }
+  };
+
+  window.doSignup = async () => {
+    const email = document.getElementById('loginEmail').value.trim();
+    const pw = document.getElementById('loginPassword').value;
+    if (!email || !pw) { showStatus('loginStatus', 'Please enter email and password.', 'error'); return; }
+    if (pw.length < 6) { showStatus('loginStatus', 'Password must be at least 6 characters.', 'error'); return; }
+    try {
+      showStatus('loginStatus', 'Creating account…', 'info');
+      await createUserWithEmailAndPassword(auth, email, pw);
+    } catch (e) { showStatus('loginStatus', e.message, 'error'); }
+  };
+
+  window.logout = async () => {
+    await signOut(auth);
+    state.studentContext = null;
+    go('home');
+  };
+
+  // ── Teacher: Assessments ──
+  async function loadAssessments() {
+    if (!state.user) return;
+    const listEl = document.getElementById('assessmentList');
+    listEl.innerHTML = '<p class="muted">Loading…</p>';
+    try {
+      const q = query(collection(db, 'assessments'), where('teacherId', '==', state.user.uid));
+      const snap = await getDocs(q);
+      state.assessments = [];
+      snap.forEach(d => state.assessments.push({ id: d.id, ...d.data() }));
+      if (state.assessments.length === 0) {
+        listEl.innerHTML = '<p class="muted">No assessments yet. Click "+ New Assessment" to get started.</p>';
+        return;
+      }
+      listEl.innerHTML = state.assessments.map(a => `
+        <div class="assessment-item">
+          <div>
+            <h4>${esc(a.title)}</h4>
+            <div class="muted" style="margin-top:3px;">
+              Code: <span class="code-badge" style="font-size:0.8rem; padding:2px 8px; letter-spacing:2px;">${esc(a.accessCode)}</span>
+              &nbsp;·&nbsp; Scale: 1–${a.maxRating}
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn-secondary" onclick="openAssessment('${a.id}')">Manage</button>
+            <button class="btn-danger" onclick="deleteAssessment('${a.id}','${esc(a.title).replace(/'/g,"\\'")}')">Delete</button>
+          </div>
+        </div>
+      `).join('');
+    } catch (e) {
+      listEl.innerHTML = `<div class="status error">Error: ${esc(e.message)}</div>`;
+    }
+  }
+  window.loadAssessments = loadAssessments;
+
+  window.createAssessment = async () => {
+    const title = document.getElementById('newAssessmentTitle').value.trim();
+    const max = parseInt(document.getElementById('newAssessmentMax').value) || 5;
+    if (!title) { alert('Please enter a title.'); return; }
+    if (!state.user) return;
+    try {
+      const docData = { title, teacherId: state.user.uid, accessCode: genCode(), maxRating: max, createdAt: serverTimestamp() };
+      const ref = await addDoc(collection(db, 'assessments'), docData);
+      state.currentAssessment = { id: ref.id, ...docData, groups: [] };
+      document.getElementById('newAssessmentTitle').value = '';
+      go('edit-assessment');
+    } catch (e) { alert('Error creating assessment: ' + e.message); }
+  };
+
+  window.openAssessment = async (id) => {
+    try {
+      const aDoc = await getDoc(doc(db, 'assessments', id));
+      if (!aDoc.exists()) { alert('Assessment not found.'); return; }
+      const groupsSnap = await getDocs(collection(db, 'assessments', id, 'groups'));
+      const groups = [];
+      groupsSnap.forEach(g => groups.push({ id: g.id, ...g.data() }));
+      // roster is stored directly on the assessment doc
+      state.currentAssessment = { id, ...aDoc.data(), groups };
+      go('edit-assessment');
+    } catch (e) { alert('Error: ' + e.message); }
+  };
+
+  window.deleteAssessment = async (id, title) => {
+    if (!confirm(`Delete "${title}"? This removes all groups and ratings.`)) return;
+    try {
+      const gSnap = await getDocs(collection(db, 'assessments', id, 'groups'));
+      const rSnap = await getDocs(collection(db, 'assessments', id, 'ratings'));
+      const batch = writeBatch(db);
+      gSnap.forEach(g => batch.delete(g.ref));
+      rSnap.forEach(r => batch.delete(r.ref));
+      batch.delete(doc(db, 'assessments', id));
+      await batch.commit();
+      await loadAssessments();
+    } catch (e) { alert('Error deleting: ' + e.message); }
+  };
+
+  // ── Teacher: Edit Assessment ──
+  function renderEditAssessment() {
+    const a = state.currentAssessment;
+    if (!a) return;
+    document.getElementById('editAssessmentTitle').textContent = a.title;
+    document.getElementById('editAssessmentCode').textContent = a.accessCode;
+    renderRosterPanel();
+    renderGroups();
+  }
+
+  // ── ROSTER ──
+  // Roster is stored as `roster: [{id, name}]` on the assessment doc.
+
+  function allAssignedIds() {
+    const a = state.currentAssessment;
+    const ids = new Set();
+    (a.groups || []).forEach(g => (g.members || []).forEach(m => ids.add(m.id)));
+    return ids;
+  }
+
+  function renderRosterPanel() {
+    const a = state.currentAssessment;
+    const panel = document.getElementById('rosterPanel');
+    const roster = a.roster || [];
+
+    if (roster.length === 0) {
+      panel.classList.remove('has-roster');
+      panel.innerHTML = `
+        <div class="drop-zone" onclick="document.getElementById('rosterCsvInput').click()">
+          <div class="drop-icon">📂</div>
+          <p><strong>Upload your student roster CSV</strong><br>
+          One student per row: <code>Name, ID (optional)</code><br>
+          <span style="color:var(--text-3);">Header row is detected automatically.</span></p>
+          <button class="btn-primary" type="button" onclick="event.stopPropagation(); document.getElementById('rosterCsvInput').click()">Choose CSV File</button>
+        </div>
+      `;
+    } else {
+      panel.classList.add('has-roster');
+      const assigned = allAssignedIds();
+      const unassignedCount = roster.filter(s => !assigned.has(s.id)).length;
+      panel.innerHTML = `
+        <div class="roster-header">
+          <div class="roster-title">
+            <h4 style="margin:0;">Student Roster</h4>
+            <span class="roster-badge">${roster.length} students</span>
+            ${unassignedCount > 0 ? `<span class="roster-badge" style="background:var(--warn-light);color:var(--warn);border-color:rgba(176,92,26,0.2);">${unassignedCount} unassigned</span>` : '<span class="roster-badge">All assigned ✓</span>'}
+          </div>
+          <div style="display:flex; gap:6px;">
+            <button class="btn-secondary" style="font-size:0.8rem; padding:6px 12px;" onclick="document.getElementById('rosterCsvInput').click()">↑ Replace CSV</button>
+            <button class="btn-text" style="font-size:0.8rem;" onclick="clearRoster()">Clear</button>
+          </div>
+        </div>
+        <div class="roster-chips">
+          ${roster.map(s => {
+            const isAssigned = assigned.has(s.id);
+            return `<span class="roster-chip ${isAssigned ? 'assigned' : ''}" title="${esc(s.name)} (${esc(s.id)})${isAssigned ? ' — assigned' : ''}">
+              ${isAssigned ? '✓ ' : ''}${esc(s.name)}
+              ${s.id ? `<span class="chip-id">${esc(s.id)}</span>` : ''}
+            </span>`;
+          }).join('')}
+        </div>
+      `;
+    }
+  }
+
+  window.importRosterCsv = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    event.target.value = '';
+    const text = await file.text();
+    const rows = text.split(/\r?\n/).map(r => r.trim()).filter(Boolean);
+    let startIdx = 0;
+    // Detect header row
+    const firstCells = rows[0].split(',').map(c => c.trim().toLowerCase());
+    if (firstCells.some(c => ['name','student','id','email'].some(k => c.includes(k)))) startIdx = 1;
+    const roster = [];
+    const seen = new Set();
+    for (let i = startIdx; i < rows.length; i++) {
+      const cells = rows[i].split(',').map(c => c.trim().replace(/^["']|["']$/g, ''));
+      const name = cells[0]; if (!name) continue;
+      const id = cells[1] || genId();
+      if (seen.has(id)) continue;
+      seen.add(id);
+      roster.push({ id, name });
+    }
+    if (roster.length === 0) { alert('No students found in the CSV. Check the format.'); return; }
+    const a = state.currentAssessment;
+    try {
+      await setDoc(doc(db, 'assessments', a.id), { roster }, { merge: true });
+      a.roster = roster;
+      renderRosterPanel();
+      renderGroups();
+      alert(`Roster loaded: ${roster.length} students.`);
+    } catch (e) { alert('Error saving roster: ' + e.message); }
+  };
+
+  window.clearRoster = async () => {
+    if (!confirm('Clear the roster? Students already added to groups will remain.')) return;
+    const a = state.currentAssessment;
+    try {
+      await setDoc(doc(db, 'assessments', a.id), { roster: [] }, { merge: true });
+      a.roster = [];
+      renderRosterPanel();
+      renderGroups();
+    } catch (e) { alert('Error: ' + e.message); }
+  };
+
+  // ── GROUPS ──
+  function renderGroups() {
+    const container = document.getElementById('groupsContainer');
+    const a = state.currentAssessment;
+    if (!a.groups || a.groups.length === 0) {
+      container.innerHTML = `<p class="muted" style="padding:12px 0;">No groups yet. Click "+ Add Group" above.</p>`;
+      return;
+    }
+    container.innerHTML = a.groups.map((g, gi) => {
+      const membersHtml = g.members && g.members.length > 0
+        ? `<ul class="member-list">
+            ${g.members.map((m, mi) => `
+              <li>
+                <span>
+                  <strong>${esc(m.name)}</strong>
+                  <span class="member-id">ID: ${esc(m.id)}</span>
+                </span>
+                <button class="remove-btn" onclick="removeMember(${gi},${mi})" title="Remove">×</button>
+              </li>
+            `).join('')}
+           </ul>`
+        : `<p class="muted" style="margin-bottom:12px; font-size:0.85rem;">No students in this group yet.</p>`;
+
+      return `
+        <div class="group-box">
+          <div class="group-header">
+            <input type="text" value="${esc(g.name)}" onchange="renameGroup(${gi}, this.value)" />
+            <button class="btn-danger" style="font-size:0.8rem; padding:6px 12px;" onclick="removeGroup(${gi})">Delete Group</button>
+          </div>
+          <div class="group-body">
+            ${membersHtml}
+            <div class="add-member-panel">
+              <div class="add-member-tabs">
+                <button class="add-member-tab active" id="tab-roster-${gi}" onclick="switchAddTab(${gi},'roster')">From Roster</button>
+                <button class="add-member-tab" id="tab-manual-${gi}" onclick="switchAddTab(${gi},'manual')">Add Manually</button>
+              </div>
+              <div class="add-member-body" id="addBody-${gi}">
+                ${buildRosterPickerHtml(gi)}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Wire up roster search for each group
+    a.groups.forEach((g, gi) => wireRosterSearch(gi));
+  }
+
+  function buildRosterPickerHtml(gi) {
+    const a = state.currentAssessment;
+    const roster = a.roster || [];
+    const g = a.groups[gi];
+    if (roster.length === 0) {
+      return `<p class="muted" style="font-size:0.85rem; text-align:center; padding:10px 0;">
+        No roster uploaded yet. Upload a CSV in Step 1 above, or use "Add Manually".
+      </p>`;
+    }
+    const groupMemberIds = new Set((g.members || []).map(m => m.id));
+    const available = roster.filter(s => !groupMemberIds.has(s.id));
+    if (available.length === 0) {
+      return `<p class="muted" style="font-size:0.85rem; text-align:center; padding:10px 0;">
+        All roster students have been added to this group.
+      </p>`;
+    }
+    return `
+      <input type="text" class="roster-search" id="rosterSearch-${gi}" placeholder="Search students…" oninput="filterRoster(${gi})" />
+      <div class="roster-select-list" id="rosterList-${gi}">
+        ${available.map(s => `
+          <div class="roster-select-item" data-sid="${esc(s.id)}" data-sname="${esc(s.name)}" data-gi="${gi}" onclick="addFromRoster(${gi}, '${esc(s.id)}', '${esc(s.name).replace(/'/g,"\\'")}')">
+            <span class="ris-name">${esc(s.name)}</span>
+            ${s.id ? `<span class="ris-id">${esc(s.id)}</span>` : ''}
+          </div>
+        `).join('')}
+      </div>
+      <button class="btn-primary" style="width:100%; margin-top:8px;" onclick="addSelectedFromRoster(${gi})">+ Add Selected to Group</button>
+      <p class="muted" style="font-size:0.78rem; margin-top:6px; text-align:center;">Click a student to toggle selection, then click "Add Selected".</p>
+    `;
+  }
+
+  function buildManualAddHtml(gi) {
+    return `
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <input type="text" id="manualName-${gi}" placeholder="Student name" style="flex:1; min-width:140px;" />
+        <input type="text" id="manualId-${gi}" placeholder="ID (optional)" style="max-width:150px;" />
+        <button class="btn-primary" style="flex-shrink:0;" onclick="addMemberManually(${gi})">+ Add</button>
+      </div>
+    `;
+  }
+
+  window.switchAddTab = (gi, tab) => {
+    document.getElementById(`tab-roster-${gi}`).classList.toggle('active', tab === 'roster');
+    document.getElementById(`tab-manual-${gi}`).classList.toggle('active', tab === 'manual');
+    const body = document.getElementById(`addBody-${gi}`);
+    body.innerHTML = tab === 'roster' ? buildRosterPickerHtml(gi) : buildManualAddHtml(gi);
+    if (tab === 'roster') wireRosterSearch(gi);
+  };
+
+  function wireRosterSearch(gi) {
+    // nothing extra needed — oninput is inline; selection state tracked by .selected class
+  }
+
+  window.filterRoster = (gi) => {
+    const q = document.getElementById(`rosterSearch-${gi}`).value.toLowerCase();
+    const list = document.getElementById(`rosterList-${gi}`);
+    if (!list) return;
+    list.querySelectorAll('.roster-select-item').forEach(el => {
+      const name = (el.dataset.sname || '').toLowerCase();
+      const id = (el.dataset.sid || '').toLowerCase();
+      el.style.display = (name.includes(q) || id.includes(q)) ? '' : 'none';
+    });
+  };
+
+  window.addFromRoster = (gi, sid, sname) => {
+    // Toggle selection
+    const list = document.getElementById(`rosterList-${gi}`);
+    if (!list) return;
+    const el = list.querySelector(`[data-sid="${sid}"]`);
+    if (el) el.classList.toggle('selected', !el.classList.contains('selected'));
+    // Visually highlight selected
+    list.querySelectorAll('.roster-select-item').forEach(item => {
+      item.style.background = item.classList.contains('selected') ? 'var(--accent-light)' : '';
+      item.style.borderColor = item.classList.contains('selected') ? 'var(--accent)' : '';
+    });
+  };
+
+  window.addSelectedFromRoster = async (gi) => {
+    const a = state.currentAssessment;
+    const g = a.groups[gi];
+    const list = document.getElementById(`rosterList-${gi}`);
+    if (!list) return;
+    const selected = [...list.querySelectorAll('.roster-select-item.selected')];
+    if (selected.length === 0) { alert('Click one or more students to select them first.'); return; }
+    const toAdd = selected.map(el => ({ id: el.dataset.sid, name: el.dataset.sname }));
+    toAdd.forEach(m => {
+      if (!g.members.some(em => em.id === m.id)) g.members.push(m);
+    });
+    try {
+      await setDoc(doc(db, 'assessments', a.id, 'groups', g.id), { name: g.name, members: g.members });
+      renderRosterPanel();
+      renderGroups();
+    } catch (e) { alert('Error: ' + e.message); }
+  };
+
+  window.addMemberManually = async (gi) => {
+    const a = state.currentAssessment;
+    const g = a.groups[gi];
+    const name = document.getElementById(`manualName-${gi}`).value.trim();
+    let id = document.getElementById(`manualId-${gi}`).value.trim() || genId();
+    if (!name) { alert('Enter a student name.'); return; }
+    if (g.members.some(m => m.id === id)) { alert('A student with this ID already exists in the group.'); return; }
+    g.members.push({ id, name });
+    // Also add to roster if not already there
+    if (!a.roster) a.roster = [];
+    if (!a.roster.some(s => s.id === id)) {
+      a.roster.push({ id, name });
+      await setDoc(doc(db, 'assessments', a.id), { roster: a.roster }, { merge: true });
+    }
+    try {
+      await setDoc(doc(db, 'assessments', a.id, 'groups', g.id), { name: g.name, members: g.members });
+      renderRosterPanel();
+      renderGroups();
+    } catch (e) { alert('Error: ' + e.message); }
+  };
+
+  window.switchEditTab = (tab, btn) => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('editTab-groups').classList.toggle('hidden', tab !== 'groups');
+    document.getElementById('editTab-results').classList.toggle('hidden', tab !== 'results');
+    if (tab === 'results') loadResults();
+  };
+
+  window.addGroup = async () => {
+    const a = state.currentAssessment;
+    const name = prompt('Group name:', `Group ${a.groups.length + 1}`);
+    if (!name) return;
+    try {
+      const ref = await addDoc(collection(db, 'assessments', a.id, 'groups'), { name, members: [] });
+      a.groups.push({ id: ref.id, name, members: [] });
+      renderGroups();
+    } catch (e) { alert('Error: ' + e.message); }
+  };
+
+  window.removeGroup = async (gi) => {
+    const a = state.currentAssessment;
+    const g = a.groups[gi];
+    if (!confirm(`Delete group "${g.name}"?`)) return;
+    try {
+      await deleteDoc(doc(db, 'assessments', a.id, 'groups', g.id));
+      a.groups.splice(gi, 1);
+      renderRosterPanel();
+      renderGroups();
+    } catch (e) { alert('Error: ' + e.message); }
+  };
+
+  window.renameGroup = async (gi, newName) => {
+    const a = state.currentAssessment;
+    const g = a.groups[gi];
+    g.name = newName;
+    try {
+      await setDoc(doc(db, 'assessments', a.id, 'groups', g.id), { name: newName, members: g.members });
+    } catch (e) { alert('Error saving: ' + e.message); }
+  };
+
+  window.removeMember = async (gi, mi) => {
+    const a = state.currentAssessment;
+    const g = a.groups[gi];
+    if (!confirm(`Remove ${g.members[mi].name} from this group?`)) return;
+    g.members.splice(mi, 1);
+    try {
+      await setDoc(doc(db, 'assessments', a.id, 'groups', g.id), { name: g.name, members: g.members });
+      renderRosterPanel();
+      renderGroups();
+    } catch (e) { alert('Error: ' + e.message); }
+  };
+
+  window.copyAccessCode = () => {
+    navigator.clipboard.writeText(state.currentAssessment.accessCode);
+    alert('Access code copied!');
+  };
+  window.copyStudentLink = () => {
+    const url = window.location.origin + window.location.pathname + '?code=' + state.currentAssessment.accessCode;
+    navigator.clipboard.writeText(url);
+    alert('Student link copied:\n' + url);
+  };
+
+  // ── Teacher: Results ──
+  window.loadResults = async () => {
+    const a = state.currentAssessment;
+    const container = document.getElementById('resultsContainer');
+    container.innerHTML = '<p class="muted">Loading…</p>';
+    try {
+      const snap = await getDocs(collection(db, 'assessments', a.id, 'ratings'));
+      const ratings = [];
+      snap.forEach(d => ratings.push(d.data()));
+      const agg = {};
+      a.groups.forEach(g => {
+        g.members.forEach(m => {
+          agg[m.id] = { id: m.id, name: m.name, groupName: g.name, ratings: [], comments: [] };
+        });
+      });
+      ratings.forEach(r => {
+        if (agg[r.toId]) {
+          agg[r.toId].ratings.push(r.rating);
+          if (r.comment && r.comment.trim()) agg[r.toId].comments.push({ from: r.fromName || 'Anonymous', text: r.comment });
+        }
+      });
+      const sorted = Object.values(agg).sort((x, y) => (x.groupName + x.name).localeCompare(y.groupName + y.name));
+      if (sorted.length === 0) { container.innerHTML = '<p class="muted">No students found.</p>'; return; }
+      let html = `<div class="results-table-wrap"><table>
+        <thead><tr><th>Group</th><th>Student</th><th>Avg</th><th>Ratings</th><th>Count</th><th>Comments</th></tr></thead>
+        <tbody>`;
+      sorted.forEach(s => {
+        const total = s.ratings.reduce((a, b) => a + b, 0);
+        const avg = s.ratings.length ? (total / s.ratings.length).toFixed(2) : '—';
+        const commentsHtml = s.comments.length
+          ? `<div class="comment-pills">${s.comments.map(c => `<div class="comment-pill"><em>${esc(c.from)}:</em> ${esc(c.text)}</div>`).join('')}</div>`
+          : '<span class="muted">—</span>';
+        html += `<tr>
+          <td>${esc(s.groupName)}</td>
+          <td><strong>${esc(s.name)}</strong><br><span class="muted">${esc(s.id)}</span></td>
+          <td><span class="avg-score">${avg}</span></td>
+          <td class="muted">${s.ratings.join(', ') || '—'}</td>
+          <td>${s.ratings.length}</td>
+          <td>${commentsHtml}</td>
+        </tr>`;
+      });
+      html += '</tbody></table></div>';
+      container.innerHTML = html;
+      state.lastResults = sorted;
+    } catch (e) {
+      container.innerHTML = `<div class="status error">Error: ${esc(e.message)}</div>`;
+    }
+  };
+
+  window.exportResultsCsv = () => {
+    if (!state.lastResults) { alert('Load results first.'); return; }
+    const rows = [['Group','Student Name','Student ID','Avg Rating','Total','Num Ratings','Comments']];
+    state.lastResults.forEach(s => {
+      const total = s.ratings.reduce((a, b) => a + b, 0);
+      const avg = s.ratings.length ? (total / s.ratings.length).toFixed(2) : '';
+      const comments = s.comments.map(c => `${c.from}: ${c.text}`).join(' | ');
+      rows.push([s.groupName, s.name, s.id, avg, total, s.ratings.length, comments]);
+    });
+    const csv = rows.map(r => r.map(c => `"${(c + '').replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${state.currentAssessment.title.replace(/[^a-z0-9]/gi, '_')}_results.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // ── Student flow ──
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('code')) {
+    document.getElementById('studentAccessCode').value = urlParams.get('code').toUpperCase();
+    setTimeout(() => go('student-entry'), 100);
+  }
+
+  window.studentFindAssessment = async () => {
+    const code = document.getElementById('studentAccessCode').value.trim().toUpperCase();
+    if (code.length !== 6) { showStatus('studentEntryStatus', 'Please enter a 6-character access code.', 'error'); return; }
+    try {
+      showStatus('studentEntryStatus', 'Looking up assessment…', 'info');
+      const q = query(collection(db, 'assessments'), where('accessCode', '==', code));
+      const snap = await getDocs(q);
+      if (snap.empty) { showStatus('studentEntryStatus', 'Invalid access code. Check with your teacher.', 'error'); return; }
+      const aDoc = snap.docs[0], aData = aDoc.data();
+      const gSnap = await getDocs(collection(db, 'assessments', aDoc.id, 'groups'));
+      const groups = [];
+      gSnap.forEach(g => groups.push({ id: g.id, ...g.data() }));
+      const allMembers = [];
+      groups.forEach(g => (g.members || []).forEach(m => allMembers.push({ ...m, groupId: g.id, groupName: g.name })));
+      if (allMembers.length === 0) {
+        showStatus('studentEntryStatus', 'No students registered yet. Ask your teacher to set up the groups.', 'error');
+        return;
+      }
+      const sel = document.getElementById('studentSelectName');
+      sel.innerHTML = '<option value="">— Choose your name —</option>';
+      const groupsMap = {};
+      allMembers.forEach(m => { if (!groupsMap[m.groupName]) groupsMap[m.groupName] = []; groupsMap[m.groupName].push(m); });
+      Object.keys(groupsMap).sort().forEach(gn => {
+        const og = document.createElement('optgroup');
+        og.label = gn;
+        groupsMap[gn].forEach(m => {
+          const opt = document.createElement('option');
+          opt.value = JSON.stringify({ groupId: m.groupId, groupName: m.groupName, id: m.id, name: m.name });
+          opt.textContent = m.name;
+          og.appendChild(opt);
+        });
+        sel.appendChild(og);
+      });
+      state.studentContext = { assessmentId: aDoc.id, assessmentTitle: aData.title, maxRating: aData.maxRating, groups };
+      document.getElementById('studentSelectTitle').textContent = aData.title;
+      document.getElementById('studentSelectSubtitle').textContent = 'Select your name from the list below to continue.';
+      showStatus('studentEntryStatus', '', 'info');
+      go('student-select');
+    } catch (e) { showStatus('studentEntryStatus', 'Error: ' + e.message, 'error'); }
+  };
+
+  window.studentEnterRating = async () => {
+    const selVal = document.getElementById('studentSelectName').value;
+    if (!selVal) { showStatus('studentSelectStatus', 'Please select your name.', 'error'); return; }
+    const selected = JSON.parse(selVal);
+    const ctx = state.studentContext;
+    const myGroup = ctx.groups.find(g => g.id === selected.groupId);
+    if (!myGroup) { showStatus('studentSelectStatus', 'Group not found.', 'error'); return; }
+    try {
+      const rSnap = await getDocs(query(
+        collection(db, 'assessments', ctx.assessmentId, 'ratings'),
+        where('fromId', '==', selected.id)
+      ));
+      if (!rSnap.empty && !confirm('You have already submitted ratings. View or update them?')) return;
+      const existing = {};
+      rSnap.forEach(d => { const data = d.data(); existing[data.toId] = data; });
+      state.studentContext.myId = selected.id;
+      state.studentContext.myName = selected.name;
+      state.studentContext.groupId = selected.groupId;
+      state.studentContext.groupName = selected.groupName;
+      state.studentContext.existing = existing;
+      const toRate = myGroup.members.filter(m => m.id !== selected.id);
+      if (toRate.length === 0) {
+        showStatus('studentSelectStatus', 'You have no group members to rate.', 'info'); return;
+      }
+      document.getElementById('studentRatingTitle').textContent = ctx.assessmentTitle;
+      document.getElementById('studentRatingSubtitle').textContent =
+        `Hi ${selected.name} — rate your ${myGroup.name} teammates below.`;
+      buildRatingForm(toRate, ctx.maxRating, existing);
+      showStatus('studentSelectStatus', '', 'info');
+      go('student-rating');
+    } catch (e) { showStatus('studentSelectStatus', 'Error: ' + e.message, 'error'); }
+  };
+
+  // ── Build Rating Form ──
+  // Uses segmented number buttons instead of fragile star CSS
+  function buildRatingForm(toRate, maxRating, existing) {
+    const form = document.getElementById('studentRatingForm');
+    form.innerHTML = '';
+    toRate.forEach((m, idx) => {
+      const prior = existing[m.id];
+      const priorRating = prior ? prior.rating : 0;
+      const priorComment = prior ? (prior.comment || '') : '';
+
+      const card = document.createElement('div');
+      card.className = 'rating-card' + (priorRating ? ' rated' : '');
+      card.dataset.toid = m.id;
+      card.dataset.toname = m.name;
+      card.dataset.rating = priorRating;
+
+      // Build buttons
+      let btnsHtml = '';
+      for (let i = 1; i <= maxRating; i++) {
+        btnsHtml += `<button type="button" class="rating-btn${priorRating === i ? ' selected' : ''}" data-val="${i}">${i}</button>`;
+      }
+
+      card.innerHTML = `
+        <div class="student-name">${esc(m.name)}</div>
+        <span class="label" style="margin-top:0;">Rating</span>
+        <div class="rating-scale">${btnsHtml}</div>
+        <div class="rating-labels"><span>Lowest</span><span>Highest</span></div>
+        <span class="label">Comment <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-3);">(optional)</span></span>
+        <textarea placeholder="Any feedback on ${esc(m.name)}'s contribution…">${esc(priorComment)}</textarea>
+      `;
+
+      // Attach rating button click events
+      card.querySelectorAll('.rating-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const val = parseInt(btn.dataset.val);
+          card.dataset.rating = val;
+          card.querySelectorAll('.rating-btn').forEach(b => b.classList.toggle('selected', parseInt(b.dataset.val) === val));
+          card.classList.add('rated');
+          updateProgress(toRate.length);
+        });
+      });
+
+      form.appendChild(card);
+    });
+    updateProgress(toRate.length);
+  }
+
+  function updateProgress(total) {
+    const cards = document.querySelectorAll('#studentRatingForm .rating-card');
+    let rated = 0;
+    cards.forEach(c => { if (parseInt(c.dataset.rating) > 0) rated++; });
+    const pct = total > 0 ? Math.round((rated / total) * 100) : 0;
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressCount').textContent = `${rated} / ${total}`;
+    document.getElementById('progressText').textContent = rated === total ? '✓ All teammates rated' : 'Rate your teammates';
+  }
+
+  window.submitRatings = async () => {
+    const ctx = state.studentContext;
+    const cards = document.querySelectorAll('#studentRatingForm .rating-card');
+    const ratings = [];
+    for (const card of cards) {
+      const toId = card.dataset.toid;
+      const toName = card.dataset.toname;
+      const rating = parseInt(card.dataset.rating || '0');
+      const comment = card.querySelector('textarea').value.trim();
+      if (!rating || rating < 1) {
+        alert(`Please rate ${toName} before submitting.`);
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      ratings.push({ toId, toName, rating, comment });
+    }
+    const btn = document.getElementById('submitRatingsBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loader"></span> Submitting…';
+    showStatus('studentRatingStatus', '', 'info');
+    try {
+      const batch = writeBatch(db);
+      for (const r of ratings) {
+        const docId = `${ctx.myId}_${r.toId}`;
+        const ref = doc(db, 'assessments', ctx.assessmentId, 'ratings', docId);
+        batch.set(ref, {
+          fromId: ctx.myId, fromName: ctx.myName,
+          toId: r.toId, toName: r.toName,
+          groupId: ctx.groupId,
+          rating: r.rating, comment: r.comment || '',
+          submittedAt: serverTimestamp()
+        });
+      }
+      await batch.commit();
+      go('student-done');
+    } catch (e) {
+      showStatus('studentRatingStatus', 'Error submitting: ' + e.message, 'error');
+      btn.disabled = false;
+      btn.innerHTML = 'Submit All Ratings';
+    }
+  };
+
+  // ── Initial route ──
+  if (!urlParams.get('code')) go('home');
+</script>
+</body>
+</html>
